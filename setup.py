@@ -27,7 +27,7 @@ def check_dependencies():
     if missing_dependencies:
         warnings.warn('Missing dependencies: {}. We recommend you follow '
                       'the installation instructions at '
-                      'https://github.com/lixiny/manotorch#installation'.format(missing_dependencies))
+                      'https://github.com/Junble19768/manotorch#installation'.format(missing_dependencies))
 
 
 # with open("README.md", "r") as fh:
@@ -37,15 +37,15 @@ check_dependencies()
 
 setup(
     name="manotorch",
-    version="0.0.2",
-    author="Lixin Yang",
-    author_email="siriusyang@sjtu.edu.cn",
+    version="0.0.3",
+    author="Baosong Jiang",
+    author_email="junble@mail.dlut.edu.cn",
     packages=find_packages(exclude=('tests',)),
     python_requires=">=3.7.0",
     description="MANO pyTORCH",
     # long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/lixiny/manotorch",
+    url="https://github.com/Junble19768/manotorch",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU GENERAL PUBLIC LICENSE",

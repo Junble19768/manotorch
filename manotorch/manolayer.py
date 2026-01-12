@@ -10,19 +10,7 @@ from mano.webuser.smpl_handpca_wrapper_HAND_only import ready_arguments
 
 from .utils.geometry import (axis_angle_to_matrix, quaternion_to_axis_angle, quaternion_to_matrix)
 
-MANOOutput = namedtuple(
-    "MANOOutput",
-    [
-        "verts",
-        "joints",
-        "center_idx",
-        "center_joint",
-        "full_poses",
-        "betas",
-        "transforms_abs",
-    ],
-)
-MANOOutput.__new__.__defaults__ = (None,) * len(MANOOutput._fields)
+from dataclasses import dataclass
 
 
 def th_with_zeros(tensor):
@@ -56,6 +44,17 @@ class ManoLayer(torch.nn.Module):
         self.flat_hand_mean = flat_hand_mean
         self.ncomps = ncomps if use_pca else -1
 
+        # for type inference
+        self.th_betas: torch.Tensor
+        self.th_shapedirs: torch.Tensor
+        self.th_posedirs: torch.Tensor
+        self.th_v_template: torch.Tensor
+        self.th_J_regressor: torch.Tensor
+        self.th_weights: torch.Tensor
+        self.th_faces: torch.Tensor
+        self.th_hands_mean: torch.Tensor
+        self.th_selected_comps: torch.Tensor
+
         if rot_mode == "axisang":
             self.rot_dim = 3
         elif rot_mode == "quat":
@@ -63,7 +62,7 @@ class ManoLayer(torch.nn.Module):
             if use_pca == True or flat_hand_mean == False:
                 warnings.warn("Quat mode doesn't support PCA pose or non flat_hand_mean !")
         else:
-            raise NotImplementedError(f"Unrecognized rotation mode, expect [pca|axisang|quat], got {rot_mode}")
+            raise NotImplementedError(f"Unrecognized rot_mode, expected:[axisang|quat], got:{rot_mode}")
 
         # load model according to side flag
         mano_assets_path = os.path.join(mano_assets_root, "models", f"MANO_{side.upper()}.pkl")  # eg.  MANO_RIGHT.pkl
@@ -265,16 +264,30 @@ class ManoLayer(torch.nn.Module):
         }
         return skinning_blob
 
+    @dataclass
+    class Result:
+        verts: torch.Tensor
+        faces: torch.Tensor
+        joints: torch.Tensor
+        center_idx: Optional[int]
+        center_joint: torch.Tensor
+        full_poses: torch.Tensor
+        betas: torch.Tensor
+        transforms_abs: torch.Tensor
+
     def forward(self, pose_coeffs: torch.Tensor, betas: Optional[torch.Tensor] = None, **kwargs):
         if self.rot_mode == "axisang":
             rot_blob = self.rotation_by_axisang(pose_coeffs)
         elif self.rot_mode == "quat":
             rot_blob = self.rotation_by_quaternion(pose_coeffs)
+        else: 
+            raise NotImplementedError(f"Unrecognized rot_mode, expected:[axisang|quat], got:{self.rot_mode}")
 
         full_rots = rot_blob["full_rots"]  # TENSOR
         skinning_blob = self.skinning_layer(full_rots, betas)
-        output = MANOOutput(
+        output = ManoLayer.Result(
             verts=skinning_blob["verts"],
+            faces=self.get_mano_closed_faces(),
             joints=skinning_blob["joints"],
             center_idx=self.center_idx,
             center_joint=skinning_blob["center_joint"],

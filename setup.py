@@ -6,11 +6,11 @@ DEPENDENCY_PACKAGE_NAMES = [
     "torch",
     "tqdm",
     "numpy",
-    "cv2",
+    "opencv-python",
     "scipy",
     "chumpy",
     "trimesh",
-    "pyvista"
+    "pyvista",
     "deprecation",
     "open3d",
 ]
@@ -33,7 +33,7 @@ def check_dependencies():
 # with open("README.md", "r") as fh:
 #     long_description = fh.read()
 
-check_dependencies()
+# check_dependencies()
 
 setup(
     name="manotorch",
@@ -51,4 +51,5 @@ setup(
         "License :: OSI Approved :: GNU GENERAL PUBLIC LICENSE",
         "Operating System :: OS Independent",
     ],
+    install_requires=DEPENDENCY_PACKAGE_NAMES,
 )

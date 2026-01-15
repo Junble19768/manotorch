@@ -275,7 +275,7 @@ class ManoLayer(torch.nn.Module):
         betas: torch.Tensor
         transforms_abs: torch.Tensor
 
-    def forward(self, pose_coeffs: torch.Tensor, betas: Optional[torch.Tensor] = None, **kwargs):
+    def forward(self, pose_coeffs: torch.Tensor, betas: Optional[torch.Tensor] = None, trans: Optional[torch.Tensor] = None, **kwargs):
         if self.rot_mode == "axisang":
             rot_blob = self.rotation_by_axisang(pose_coeffs)
         elif self.rot_mode == "quat":
@@ -295,6 +295,8 @@ class ManoLayer(torch.nn.Module):
             betas=skinning_blob["betas"],
             transforms_abs=skinning_blob["transforms_abs"],
         )
+        if trans is not None:
+            output.verts += trans
         return output
 
     def get_rotation_center(self, betas: Optional[torch.Tensor] = None):

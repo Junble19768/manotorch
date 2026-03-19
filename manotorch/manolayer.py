@@ -35,6 +35,10 @@ class ManoLayer(torch.nn.Module):
         ncomps: int = 15,  # Only used in pca mode
         **kargs,
     ):
+        '''TODO
+        [ ] 事实上，如果rot_mode是四元数，PCA就用不了，还有额外的约束，十分麻烦，可以考虑删除
+        [ ] forward函数，把glrot从pose中拿出来，合并在一起真不需要
+        '''
         super().__init__()
         self.center_idx = center_idx
         self.rot_mode = rot_mode
@@ -54,6 +58,8 @@ class ManoLayer(torch.nn.Module):
         self.th_faces: torch.Tensor
         self.th_hands_mean: torch.Tensor
         self.th_selected_comps: torch.Tensor
+        self.pca_mean: torch.Tensor # [45]
+        self.pca_comp_mat: torch.Tensor # [45, 45]
 
         if rot_mode == "axisang":
             self.rot_dim = 3
@@ -82,6 +88,9 @@ class ManoLayer(torch.nn.Module):
         kintree_table = smpl_data["kintree_table"]
         self.kintree_parents = list(kintree_table[0].tolist())
         hands_components = smpl_data["hands_components"]
+        _hands_mean = smpl_data["hands_mean"]
+        self.register_buffer("pca_mean", torch.Tensor(_hands_mean).float().flatten())
+        self.register_buffer("pca_comp_mat", torch.Tensor(hands_components).float().reshape((45,45)))
 
         if rot_mode == "axisang":
             hands_mean = np.zeros(hands_components.shape[1]) if flat_hand_mean else smpl_data["hands_mean"]

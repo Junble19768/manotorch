@@ -92,7 +92,7 @@ class ManoLayer(torch.nn.Module):
         '''
         pose_coeffs: [..., 45]
         '''
-        return (pose_coeffs - self.pca_mean) @ self.pca_comp_mat_inv[:dim] # (..., dim)
+        return (pose_coeffs - self.pca_mean) @ self.pca_comp_mat_inv[:,:dim] # (..., dim)
 
     def inverse_transform_from_pca(self, pose_coeffs_pca:torch.Tensor):
         '''

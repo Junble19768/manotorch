@@ -61,9 +61,8 @@ class AxisLayerFK(Module):
         super(AxisLayerFK, self).__init__()
         self.transf_parent_mapping = [0, 0, 1, 2, 0, 4, 5, 0, 7, 8, 0, 10, 11, 0, 13, 14]
 
-        tmpl_pose = torch.zeros(1, 48)
-        tmpl_shape = torch.zeros(1, 10)
-        tmpl_mano = ManoLayer(side=side, mano_assets_root=mano_assets_root)(tmpl_pose, tmpl_shape)
+        tmpl_pose = torch.zeros(1, 45)
+        tmpl_mano = ManoLayer(side=side, mano_assets_root=mano_assets_root)(tmpl_pose)
         tmpl_joints = tmpl_mano.joints
         tmpl_transf_abs = tmpl_mano.transforms_abs  # tmpl_T_g_p
 

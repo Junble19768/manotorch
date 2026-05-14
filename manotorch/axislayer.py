@@ -17,11 +17,13 @@ class AxisAdaptiveLayer(torch.nn.Module):
         self.joints_mapping = [5, 6, 7, 9, 10, 11, 17, 18, 19, 13, 14, 15, 1, 2, 3]
         self.parent_joints_mappings = [0, 5, 6, 0, 9, 10, 0, 17, 18, 0, 13, 14, 0, 1, 2]
         self.side = side
-        if side == "right":
-            up_axis_base = np.vstack((np.array([[0, 1, 0]]).repeat(13, axis=0), np.array([[1, 1, 1]]).repeat(3, axis=0)))
-        elif side == "left":
-            up_axis_base = np.vstack((np.array([[0, 1, 0]]).repeat(13, axis=0), np.array([[-1, 1, 1]]).repeat(3, axis=0)))
-        self.register_buffer("up_axis_base", torch.from_numpy(up_axis_base).float().unsqueeze(0))
+        _up_axis_base = {
+            "right": np.vstack((np.array([[0, 1, 0]]).repeat(13, axis=0), np.array([[1, 1, 1]]).repeat(3, axis=0))),
+            "left": np.vstack((np.array([[0, 1, 0]]).repeat(13, axis=0), np.array([[-1, 1, 1]]).repeat(3, axis=0)))
+        }
+        assert side in ["right", "left"]
+        self.up_axis_base: torch.Tensor
+        self.register_buffer("up_axis_base", torch.from_numpy(_up_axis_base[side]).float().unsqueeze(0))
 
     def forward(self, hand_joints, transf):
         """ Compute the back (twist), up (spread), and left (bend) axes direction of the hand
@@ -38,11 +40,11 @@ class AxisAdaptiveLayer(torch.nn.Module):
         # b_axis = hand_joints[:, self.joints_mapping] - hand_joints[:, [i + 1 for i in self.joints_mapping]]
         b_axis = hand_joints[:, self.parent_joints_mappings] - hand_joints[:, self.joints_mapping]
         b_axis = (transf[:, 1:, :3, :3].transpose(2, 3) @ b_axis.unsqueeze(-1)).squeeze(-1)
-        if self.side == "right":
-            b_axis_init = torch.tensor([1, 0, 0]).float().unsqueeze(0).unsqueeze(0).repeat(bs, 1, 1).to(b_axis.device)
-        elif self.side == "left":
-            b_axis_init = torch.tensor([-1, 0, 0]).float().unsqueeze(0).unsqueeze(0).repeat(bs, 1, 1).to(b_axis.device)
-        b_axis = torch.cat((b_axis_init, b_axis), dim=1)  # (B, 16, 3)
+        _b_axis_init = {
+            "right": torch.tensor([1, 0, 0]).float().unsqueeze(0).unsqueeze(0).repeat(bs, 1, 1).to(b_axis.device),
+            "left": torch.tensor([-1, 0, 0]).float().unsqueeze(0).unsqueeze(0).repeat(bs, 1, 1).to(b_axis.device),
+        }
+        b_axis = torch.cat((_b_axis_init[self.side], b_axis), dim=1)  # (B, 16, 3)
 
         l_axis = torch.cross(b_axis, self.up_axis_base.expand(bs, 16, 3))
 
@@ -73,6 +75,9 @@ class AxisLayerFK(Module):
         _tmpl_T_p_a = torch.cat((tmpl_R_p_a, zero_tsl), dim=3)  # (1, 16, 3, 4)
         tmpl_T_p_a = torch.cat((_tmpl_T_p_a, zero_pad), dim=2)  # (1, 16, 4, 4)
         tmpl_T_g_a = torch.matmul(tmpl_transf_abs, tmpl_T_p_a)  # (1, 16, 4, 4)
+        self.TMPL_T_p_a: torch.Tensor
+        self.TMPL_R_p_a: torch.Tensor
+        self.TMPL_T_g_a: torch.Tensor
         self.register_buffer("TMPL_T_p_a", tmpl_T_p_a.float())
         self.register_buffer("TMPL_R_p_a", tmpl_R_p_a.float())
         self.register_buffer("TMPL_T_g_a", tmpl_T_g_a.float())
@@ -172,6 +177,7 @@ class AxisLayer(Module):
         super().__init__()
         self.joints_mapping = [5, 6, 7, 9, 10, 11, 17, 18, 19, 13, 14, 15, 1, 2, 3]
         up_axis_base = np.vstack((np.array([[0, 1, 0]]).repeat(12, axis=0), np.array([[1, 1, 1]]).repeat(3, axis=0)))
+        self.up_axis_base: torch.Tensor
         self.register_buffer("up_axis_base", torch.from_numpy(up_axis_base).float().unsqueeze(0))
 
     def forward(self, hand_joints, transf):

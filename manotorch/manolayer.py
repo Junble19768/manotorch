@@ -6,9 +6,8 @@ from typing import Optional
 import numpy as np
 import torch
 
-from mano.webuser.smpl_handpca_wrapper_HAND_only import ready_arguments
-
 from .utils.geometry import (axis_angle_to_matrix, quaternion_to_axis_angle, quaternion_to_matrix)
+from .model_loader import load_mano_model
 
 from dataclasses import dataclass
 
@@ -70,19 +69,19 @@ class ManoLayer(torch.nn.Module):
             mano_assets_path), f"Can not find MANO assets {mano_assets_path}, please follow steps in README.md"
 
         # parse and register stuff
-        smpl_data = ready_arguments(mano_assets_path)
-        self.register_buffer("th_shapedirs", torch.Tensor(np.array(smpl_data["shapedirs"].r)))
-        self.register_buffer("th_posedirs", torch.Tensor(np.array(smpl_data["posedirs"].r)))
-        self.register_buffer("th_v_template", torch.Tensor(np.array(smpl_data["v_template"].r)).unsqueeze(0))
-        self.register_buffer("th_J_regressor", torch.Tensor(np.array(smpl_data["J_regressor"].toarray())))
-        self.register_buffer("th_weights", torch.Tensor(np.array(smpl_data["weights"].r)))
-        self.register_buffer("th_faces", torch.Tensor(np.array(smpl_data["f"]).astype(np.int32)).long())
+        smpl_data = load_mano_model(mano_assets_path)
+        self.register_buffer("th_shapedirs", torch.Tensor(smpl_data.shapedirs))
+        self.register_buffer("th_posedirs", torch.Tensor(smpl_data.posedirs))
+        self.register_buffer("th_v_template", torch.Tensor(smpl_data.v_template).unsqueeze(0))
+        self.register_buffer("th_J_regressor", torch.Tensor(smpl_data.joint_regressor))
+        self.register_buffer("th_weights", torch.Tensor(smpl_data.weights))
+        self.register_buffer("th_faces", torch.Tensor(smpl_data.faces.astype(np.int32)).long())
 
-        kintree_table = smpl_data["kintree_table"]
+        kintree_table = smpl_data.kintree_table
         self.kintree_parents = list(kintree_table[0].tolist())
-        hands_components = smpl_data["hands_components"] # (45, 45)
+        hands_components = smpl_data.hands_components # (45, 45)
         hands_comp_inv = np.linalg.inv(hands_components) # (45, 45)
-        _hands_mean = smpl_data["hands_mean"].reshape(45) # (45,)
+        _hands_mean = smpl_data.hands_mean.reshape(45) # (45,)
         self.register_buffer("pca_mean", torch.Tensor(_hands_mean).float())
         self.register_buffer("pca_comp_mat", torch.Tensor(hands_components).float())
         self.register_buffer("pca_comp_mat_inv", torch.Tensor(hands_comp_inv).float())

@@ -18,7 +18,6 @@ dependencies:
   - tqdm
   - git
   - pip:
-      - git+https://github.com/mattloper/chumpy.git
       - cython
       - scipy
       - trimesh
